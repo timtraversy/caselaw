@@ -3,6 +3,7 @@ import string
 import xlsxwriter
 import re
 from highCourts import courts
+from highCourts import regex
 
 def initSheet(sheet):
     sheet.write('A1','citing state') # case['jurisdiction']['name']
@@ -50,53 +51,47 @@ def getName(opinion, index):
             break;
     return opinion[lastCapital:endIndex].strip()
 
-def fastFindIndices(pattern, text):
-    matches = []
-    reMatches = re.finditer(pattern, text)
-    if reMatches:
-
-        for match in reMatches:
-            matches.append(match.start())
-    return matches
-
 def findCitations(count, sheet, case, opinion):
     for court in courts:
         acr = court['name']
-        matches = fastFindIndices(acr, opinion)
+#        regex = re.compile(r'^[^.]*' + re.escape(acr) + r' [0-9]')
+        print(court['regex'])
+        print(type(court['regex'])
+        matches = re.finditer(court['regex'], opinion)
         for match in matches:
-            print(opinion[match])
-            print(opinion[match-1])
-
-            print(opinion[match-20:match+20])
-            if opinion[match].isdigit() and not opinion[match - 1] == '.':
-                jurisdiction = case['jurisdiction']['name']
-                print(f'Parsing citation {count} from {jurisdiction}')
-                sheet.write(f'A{count}', jurisdiction)
-                sheet.write(f'B{count}', acr)
-                sheet.write(f'C{count}', case['citations'][0]['cite'])
-                sheet.write(f'D{count}', case['name'])
-                sheet.write(f'E{count}', getName(opinion, match))
-                sheet.write(f'F{count}', getCitation(opinion, match))
-                sheet.write(f'G{count}', case['court']['name_abbreviation'])
-                sheet.write(f'H{count}', court["acronym"])
-                sheet.write(f'I{count}', case['decision_date'].split('-')[0])
-                count += 1
-                if count > 20:
-                    return count
+            jurisdiction = case['jurisdiction']['name']
+            print(f'Parsing citation {count} from {jurisdiction}')
+#                sheet.write(f'A{count}', jurisdiction)
+#                sheet.write(f'B{count}', acr)
+#                sheet.write(f'C{count}', case['citations'][0]['cite'])
+#                sheet.write(f'D{count}', case['name'])
+#                sheet.write(f'E{count}', getName(opinion, match.start()))
+#                sheet.write(f'F{count}', getCitation(opinion, match.end()))
+#                sheet.write(f'G{count}', case['court']['name_abbreviation'])
+#                sheet.write(f'H{count}', court["acronym"])
+#                sheet.write(f'I{count}', case['decision_date'].split('-')[0])
+            count += 1
+            if count > 20:
+                return count
     return count
 
 def parseCases(sheet, jsonData):
     count = 2
     for line in jsonData:
-        if count > 20:
-            return
+#        if count > 20:
+ #           return
        # if count % 10 == 0:
         case = json.loads(str(line, 'utf8'))
         state = case['jurisdiction']['name']
         for opinion in case['casebody']['data']['opinions']:
             count = findCitations(count, sheet, case, str(opinion))
 
+def formatCourts():
+    for court in courts:
+        court['regex'] = regex(court['name'])
+
 def main():
+    formatCourts()
     wb = xlsxwriter.Workbook('data.xlsx')
     directoryPath = "/Volumes/Research/Bulk Case Law/"
     directory = os.fsencode(directoryPath)
